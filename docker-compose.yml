@@ -1,0 +1,57 @@
+version: '3'
+
+services:
+  nextcloud-db:
+    container_name: nextcloud-db
+    image: mariadb:10.6
+    restart: always
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    environment:
+      - MYSQL_ROOT_PASSWORD=changeme_root
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=changeme_pass
+    volumes:
+      - R:/nextcloud/db:/var/lib/mysql
+    networks:
+      - proxy_my-network
+
+  nextcloud-redis:
+    container_name: nextcloud-redis
+    image: redis:alpine
+    restart: always
+    networks:
+      - proxy_my-network
+    volumes:
+      - R:/nextcloud/redis:/data
+
+  nextcloud-app:
+    container_name: nextcloud-app
+    image: nextcloud:latest
+    restart: always
+    environment:
+      - MYSQL_PASSWORD=changeme_pass
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_HOST=nextcloud-db
+      - REDIS_HOST=nextcloud-redis
+    depends_on:
+      - nextcloud-db
+      - nextcloud-redis
+    volumes:
+      - R:/nextcloud/data:/var/www/html/data
+      - R:/nextcloud/config:/var/www/html/config
+    networks:
+      - proxy_my-network
+    expose:
+      - "80"
+    labels:
+      - "traefik.enable=false"
+
+networks:
+  proxy_my-network:
+    external: true
+
+volumes:
+  nextcloud_data:
+  nextcloud_db:
